@@ -1,1 +1,1 @@
-adfafadsfas# QC.MATH.342
+# QC.MATH.342
