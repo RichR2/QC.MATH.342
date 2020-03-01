@@ -1,6 +1,6 @@
 ---
 title: "Lab 4"
-author: "Your Name Here"
+author: "Richard Romano"
 output: pdf_document
 date: "11:59PM Feb 29, 2020"
 ---
