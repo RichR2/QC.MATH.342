@@ -1,0 +1,299 @@
+---
+title: "Lab 7"
+author: "Your Name Here"
+output: pdf_document
+date: "7:09PM April 8, 2020"
+---
+
+Run three OLS models on the boston housing data using all available features: 
+
+(1) where the response is medv, 
+(2) where the response is the log base 10 of medv and
+(3) where the response is the square root of medv. 
+
+Compare the two models on oos se of the residuals. Use K = 5 to create a training-test split. Which model is better? 
+
+```{r}
+install.packages("pacman")
+pacman::p_load(MASS)
+boston_housing = Boston
+head(boston_housing)
+K = 5
+X = data.matrix(boston_housing)
+data_D = nrow(boston_housing)
+## splitting data I did not get on my own. needed help.
+test_indices = sample(1:data_D, 1/K * data_D)
+train_indices = setdiff(1:data_D, test_indices)
+y = boston_housing$medv
+X_train = X[train_indices, ]
+X_train
+X_test = X[test_indices,]
+y_train = y[train_indices]
+y_test = y[test_indices]
+dim(X_train)
+dim(X_test)
+length(y_train)
+length(y_test)
+Y_train
+y_train
+regression_boston = lm(Y_train ~ ., data.frame(X_train))
+regression_boston
+summary(regression_boston)
+sd(regression_boston$residuals)
+y_hat_oos = predict(regression_boston, data.frame(X_test))
+oos_residuals = y_test - y_hat_oos
+sd(oos_residuals)
+regression_logboston = lm(log(y_train, base = 10) ~., data.frame(X_train))
+sd(regression_logboston$residuals)
+summary(regression_logboston)
+y_hat_oos_log = predict(regression_logboston, data.frame(X_test))
+oos_residuals_log = y_test - y_hat_oos_log
+sd(oos_residuals_log)
+
+regression_sqrtboston = lm(sqrt(y_train) ~. , data.frame(X_train))
+sd(regression_sqrtboston$residuals)
+summary(regression_sqrtboston)
+y_hat_oos_sqrt = predict(regression_sqrtboston, data.frame(X_test))
+oos_residuals_sqrt = y_test - y_hat_oos_sqrt
+sd(oos_residuals_sqrt)
+
+```
+
+When evaluating the models out of sample, did you ever extrapolate? Which predictions specifically in your test set were extrapolations? How "bad" were the exrapolations? 
+
+```{r}
+X_train
+X_test
+y_train
+y_test
+#yes extrapolation did occur. crime (large extrapolation), indus (max oos was more then double then max training data), chas ( no 1's in training data, 1's in test data, nox (small extrapolation but being nitrous oxide I would be cautious and note its parts per 10 million),dist (minimum is lower in test by small amount and max is higher in test by small amount), rad(large extrapolation), tax (large extrapolation), ptradio(mintest smaller then min train data. small amount), black (large extrapolation), lstat (small extrapolation. min and max data)
+?Boston
+```
+
+Regardless of the model that came out better, let's consider the response to be raw medv i.e. without taking a transformation. Run a model that includes all squared features (except `chas` which is binary). Does this model do better than vanilla OLS from question 1?
+
+```{r}
+X_train^2
+X_train
+regression_boston_squared = lm(Y_train ~ ., data.frame(X_train^2))
+summary(regression_boston_squared)$r.squared
+sd(regression_boston_squared$residuals)
+y_hat_oos_squared = predict(regression_boston_squared, data.frame(X_test^2))
+oos_residuals_squared = y_test - y_hat_oos_squared
+sd(oos_residuals_squared)
+# the R^2 is a little better but oos metrics is worse.
+regression_boston_squared_nosplit = lm(medv ~ poly(crim, 2) + poly(zn, 2) + poly(indus, 2) + chas + poly(nox, 2) + poly(rm, 2) + poly(age, 2) + poly(dis, 2) + poly(rad, 2) + poly(tax, 2) + poly(ptratio, 2) + poly(black, 2) + poly(lstat, 2), boston_housing)
+regression_boston_squared_nosplit
+summary(regression_boston_squared_nosplit)$r.squared
+boston_housing_lm = lm(medv ~ crim + zn + indus + chas + nox + rm + age + dis + rad + tax + ptratio + black + lstat, boston_housing)
+summary(boston_housing_lm)$r.squared
+#the polynomial regression with degree 2 does better according to R squared. although I would not say it is better because of that and it is most likely overfitting. 
+```
+
+Run a model that includes all polynomail functions of degree 3 of all features (except `chas` which is binary). Does this model do better than the degree 2 polynomial function of the previous question?
+
+```{r}
+regression_boston_cubed = lm(Y_train ~ ., data.frame(X_train^3))
+summary(regression_boston_cubed)$r.squared
+sd(regression_boston_cubed$residuals)
+regression_boston_cubed_nosplit = lm(medv ~ poly(crim, 3) + poly(zn, 3) + poly(indus, 3) + chas + poly(nox, 3) + poly(rm, 3) + poly(age, 3) + poly(dis, 3) + poly(rad, 3) + poly(tax, 3) + poly(ptratio, 3) + poly(black, 3) + poly(lstat, 3), boston_housing)
+summary(regression_boston_cubed_nosplit)$r.squared
+# by R squared metrics it does a little bit better. not much though. by better I mean it most likely over fits better.
+```
+
+Use polynomial regression to perfectly fitting the following data:
+
+```{r}
+pacman::p_load(ggplot2)
+n = 10
+set.seed(1984)
+x = runif(n, 0, 10)
+y = 5 + 2 * x + rnorm(n)
+X = as.matrix(cbind(1, x, x^2, x^3, x^4, x^5, x^6, x^7, x^8, x^9))
+b = solve(t(X) %*% X) %*% t(X) %*% y
+b
+degree_9_poly_mod = lm(y ~ poly(x, 9, raw = TRUE))
+b_poly_9 = coef(degree_9_poly_mod)
+
+}
+df = data.frame(x = x, y = y)
+basic = ggplot(df, aes(x, y)) +
+  geom_point()
+```
+
+Illustrate Runge's phenomenon in this model by scatterplotting the data with $g(x)$ overlaid in green.
+
+```{r}
+
+
+plot_function_degree_9 = function(x, b){
+  b[1] + b[2] * x + b[3] * x^2 + b[4] * x^3 + b[5] * x^4 + b[6] * x^5 + b[7] * x^6 + b[8] * x^7 + b[9] * x^8  +  b[10] * x^9
+basic + stat_function(fun = plot_function_degree_9, args = list(b = b_poly_9, col = "green")
+basic  
+summary(degree_9_poly_mod)$r.squared
+```
+
+For the rest of this assignment, I highly recommend using the [ggplot cheat sheet](https://rstudio.com/wp-content/uploads/2015/03/ggplot2-cheatsheet.pdf) as a reference resource. You will see questions that say "Create the best-looking plot". Among other things you may choose to do, remember to label the axes using real English, provide a title, subtitle. You may want to pick a theme and color scheme that you like and keep that constant throughout this lab. The default is fine if you are running short of time.
+
+Load up the `GSSvocab` dataset in package `carData` as `X` and drop all observations with missing measurements. Briefly summarize the documentation on this dataset. What is the data type of each variable? What is the response variable?
+
+```{r}
+pacman::p_load(GSSvocab, carData)
+```
+
+Create two different plots and identify the best-looking plot you can to examine the `age` variable. Save the best looking plot as an appropriately-named PDF.
+
+```{r}
+?GSSvocab
+ggplot(GSSvocab) +
+  aes(age) +
+  geom_histogram(binwidth = 1, col = "darkblue", fill = "lightgreen", alpha = 0.3)
+
+age_PDF = ggplot(GSSvocab, aes(age)) +
+  geom_area(stat = "bin", binwidth = 2, col = "black", fill = "blue", alpha = .3)
+age_PDF
+```
+
+Create two different plots and identify the best looking plot you can to examine the `vocab` variable. Save the best looking plot as an appropriately-named PDF.
+
+```{r}
+ggplot(GSSvocab, aes(vocab)) +
+  geom_freqpoly()
+vocab_PDF = ggplot(GSSvocab, aes(vocab)) +
+  geom_density(fill = "green", alpha = .07)
+
+GSSvocab
+
+```
+
+Create the best-looking plot you can to examine the `ageGroup` variable by `gender`. Does there appear to be an association? There are many ways to do this.
+
+```{r}
+ggplot(GSSvocab, aes(x = gender, y = ageGroup ))+
+  geom_bar(stat = "identity") +
+  labs(title = "ageGroup against gender", x = "gender", y = "ageGroup", caption = "Source: GSSvocab data set")
+```
+
+Create the best-looking plot you can to examine the `vocab` variable by `age`. Does there appear to be an association?
+
+```{r}
+f = ggplot(GSSvocab, aes(x = age, y = vocab ))+
+  geom_point()
+f
+#no.
+```
+
+Add an estimate of $f(x)$ using the smoothing geometry to the previous plot. Does there appear to be an association now?
+
+```{r}
+f + geom_smooth() +
+  geom_rug()
+  
+```
+
+Using the plot from the previous question, create the best looking overloading with variable `gender`. Does there appear to be an interaction of `gender` and `age`?
+
+```{r}
+ggplot(GSSvocab, aes(x = age, y = vocab))+
+  geom_smooth() 
+```
+
+
+Using the plot from the previous question, create the best looking overloading with variable `nativeBorn`. Does there appear to be an interaction of `nativeBorn` and `age`?
+
+```{r}
+
+```
+
+Create two different plots and identify the best-looking plot you can to examine the `vocab` variable by `educGroup`. Does there appear to be an association?
+
+```{r}
+#TO-DO
+```
+
+Using the best-looking plot from the previous question, create the best looking overloading with variable `gender`. Does there appear to be an interaction of `gender` and `educGroup`?
+
+```{r}
+#TO-DO
+```
+
+Using facets, examine the relationship between `vocab` and `ageGroup`. You can drop year level `(Other)`. Are we getting dumber?
+
+```{r}
+#TO-DO
+```
+
+We will now be getting some experience with speeding up R code using C++ via the `Rcpp` package.
+
+First, clear the workspace and load the `Rcpp` package.
+
+```{r}
+#TO-DO
+```
+
+Create a variable `n` to be 10 and a vaiable `Nvec` to be 100 initially. Create a random vector via `rnorm` `Nvec` times and load it into a `Nvec` x `n` dimensional matrix.
+
+```{r}
+#TO-DO
+```
+
+Write a function `all_angles` that measures the angle between each of the pairs of vectors. You should measure the vector on a scale of 0 to 180 degrees with negative angles coerced to be positive.
+
+```{r}
+#TO-DO
+```
+
+Plot the density of these angles.
+
+```{r}
+#TO-DO
+```
+
+Write an Rcpp function `all_angles_cpp` that does the same thing. Use an IDE if ou want, but write it below in-line.
+
+```{r}
+
+```
+
+Test the time difference between these functions for `n = 1000` and `Nvec = 100, 500, 1000, 5000`.  Store the results in a matrix.
+
+```{r}
+#TO-DO
+```
+
+Plot the divergence of performance (in log seconds) over n using a line geometry. Use two different colors for the R and CPP functions. Make sure there's a color legend on your plot.
+
+```{r}
+#TO-DO
+```
+
+Let `Nvec = 10000` and vary `n` to be 10, 100, 1000. Plot the density of angles for all three values of `n` on one plot using color to signify `n`. Make sure you have a color legend. This is not easy.
+
+```{r}
+#TO-DO
+```
+
+Write an R function `nth_fibonnaci` that finds the nth Fibonnaci number via recursion but allows you to specify the starting number. For instance, if the sequency started at 1, you get the familiar 1, 1, 2, 3, 5, etc. But if it started at 0.01, you would get 0.01, 0.01, 0.02, 0.03, 0.05, etc.
+
+```{r}
+#TO-DO
+```
+
+Write an Rcpp function `nth_fibonnaci_cpp` that does the same thing. Use an IDE if ou want, but write it below in-line.
+
+```{r}
+#TO-DO
+```
+
+Time the difference in these functions for n = 100, 200, ...., 1500 while starting the sequence at the smallest possible floating point value in R. Store the results in a matrix.
+
+```{r}
+#TO-DO
+```
+
+Plot the divergence of performance (in log seconds) over n using a line geometry. Use two different colors for the R and CPP functions. Make sure there's a color legend on your plot.
+
+```{r}
+#TO-DO
+```
+
